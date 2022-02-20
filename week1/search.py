@@ -7,6 +7,8 @@ from flask import (
 
 from week1.opensearch import get_opensearch
 
+from sys import maxsize
+
 bp = Blueprint('search', __name__, url_prefix='/search')
 
 
@@ -34,25 +36,32 @@ def process_filters(filters_input):
         KEY_STR = '.key'
         TO_STR = '.to'
         FROM_STR = '.from'
-        DEFAULT_LOWER = float("-inf")
-        DEFAULT_UPPER = float("inf")
+        DEFAULT_LOWER = 0
+        DEFAULT_UPPER = maxsize
 
         if type == "range":
-            newRangeFilter = {}
-            newRangeFilter['range'][filter][LOWER_BOUND_STR] = request.args.get(
-                filter + FROM_STR, DEFAULT_LOWER)
+            newRangeFilter = {
+                "range": {
+                    filter: {
+                        LOWER_BOUND_STR: request.args.get(
+                            filter + FROM_STR) if request.args.get(filter + FROM_STR) else DEFAULT_LOWER
+                    }
+                }
+            }
             newRangeFilter['range'][filter][UPPER_BOUND_STR] = request.args.get(
-                filter + TO_STR, DEFAULT_UPPER)
+                filter + TO_STR) if request.args.get(filter + TO_STR) else DEFAULT_UPPER
 
-            _to = newRangeFilter[range][filter][UPPER_BOUND_STR]
-            _from = newRangeFilter[range][filter][LOWER_BOUND_STR]
+            _to = newRangeFilter['range'][filter][UPPER_BOUND_STR]
+            _from = newRangeFilter['range'][filter][LOWER_BOUND_STR]
 
             filters.append(newRangeFilter)
             display_filters.append(
                 f'Bounding results using {display_name} between {_from} and {_to} inclusive.')
             applied_filters += f"&{filter}.from={_from}&{filter}.to={_to}"
         elif type == "terms":
-            newTermFilter = {}
+            newTermFilter = {
+                "term": {}
+            }
             newTermFilter['term'][filter] = request.args.get(
                 filter + KEY_STR, '*')
 
@@ -174,31 +183,31 @@ def create_query(user_query, filters, sort="_score", sortDir="desc"):
                     "field": "regularPrice",
                     "ranges": [
                         {
-                            "to": 100,
+                            "to": '100',
                             "key": "$"
                         },
                         {
-                            "from": 100,
-                            "to": 200,
+                            "from": '100',
+                            "to": '200',
                             "key": "$$"
                         },
                         {
-                            "from": 200,
-                            "to": 300,
+                            "from": '200',
+                            "to": '300',
                             "key": "$$$"
                         },
                         {
-                            "from": 300,
-                            "to": 400,
+                            "from": '300',
+                            "to": '400',
                             "key": "$$$$"
                         },
                         {
-                            "from": 400,
-                            "to": 500,
+                            "from": '400',
+                            "to": '500',
                             "key": "$$$$$"
                         },
                         {
-                            "from": 500,
+                            "from": '500',
                             "key": "$$$$$$"
                         }
                     ]
@@ -206,13 +215,15 @@ def create_query(user_query, filters, sort="_score", sortDir="desc"):
             },
             "missing_images": {
                 "missing": {
-                    "field": "image"
+                    "field": "image.keyword"
                 }
             },
             "department": {
                 "terms": {
                     "field": "department.keyword",
-                    "missing": "No department.",
+                    "missing": "N/A",
+                    "size": 10,
+                    "min_doc_count": 0
                 }
             }
         }
