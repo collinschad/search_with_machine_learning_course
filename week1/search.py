@@ -17,7 +17,8 @@ bp = Blueprint('search', __name__, url_prefix='/search')
 def process_filters(filters_input):
     # Filters look like: &filter.name=regularPrice&regularPrice.key={{ agg.key }}&regularPrice.from={{ agg.from }}&regularPrice.to={{ agg.to }}
     filters = []
-    display_filters = []  # Also create the text we will use to display the filters that are applied
+    # Also create the text we will use to display the filters that are applied
+    display_filters = []
     applied_filters = ""
     for filter in filters_input:
         type = request.args.get(filter + ".type")
@@ -26,12 +27,42 @@ def process_filters(filters_input):
         # We need to capture and return what filters are already applied so they can be automatically added to any existing links we display in aggregations.jinja2
         applied_filters += "&filter.name={}&{}.type={}&{}.displayName={}".format(filter, filter, type, filter,
                                                                                  display_name)
-        #TODO: IMPLEMENT AND SET filters, display_filters and applied_filters.
+        # TODO: IMPLEMENT AND SET filters, display_filters and applied_filters.
         # filters get used in create_query below.  display_filters gets used by display_filters.jinja2 and applied_filters gets used by aggregations.jinja2 (and any other links that would execute a search.)
+        LOWER_BOUND_STR = 'gte'
+        UPPER_BOUND_STR = 'lte'
+        KEY_STR = '.key'
+        TO_STR = '.to'
+        FROM_STR = '.from'
+        DEFAULT_LOWER = float("-inf")
+        DEFAULT_UPPER = float("inf")
+
         if type == "range":
-            pass
+            newRangeFilter = {}
+            newRangeFilter['range'][filter][LOWER_BOUND_STR] = request.args.get(
+                filter + FROM_STR, DEFAULT_LOWER)
+            newRangeFilter['range'][filter][UPPER_BOUND_STR] = request.args.get(
+                filter + TO_STR, DEFAULT_UPPER)
+
+            _to = newRangeFilter[range][filter][UPPER_BOUND_STR]
+            _from = newRangeFilter[range][filter][LOWER_BOUND_STR]
+
+            filters.append(newRangeFilter)
+            display_filters.append(
+                f'Bounding results using {display_name} between {_from} and {_to} inclusive.')
+            applied_filters += f"&{filter}.from={_from}&{filter}.to={_to}"
         elif type == "terms":
-            pass #TODO: IMPLEMENT
+            newTermFilter = {}
+            newTermFilter['term'][filter] = request.args.get(
+                filter + KEY_STR, '*')
+
+            _key = newTermFilter['term'][filter]
+
+            filters.append(newTermFilter)
+            display_filters.append(
+                f'Filtering via {display_name} on term "{_key}".')
+            applied_filters += f'&{filter}.key={_key}'
+
     print("Filters: {}".format(filters))
 
     return filters, display_filters, applied_filters
@@ -40,7 +71,8 @@ def process_filters(filters_input):
 # Our main query route.  Accepts POST (via the Search box) and GETs via the clicks on aggregations/facets
 @bp.route('/query', methods=['GET', 'POST'])
 def query():
-    opensearch = get_opensearch() # Load up our OpenSearch client from the opensearch.py file.
+    # Load up our OpenSearch client from the opensearch.py file.
+    opensearch = get_opensearch()
     # Put in your code to query opensearch.  Set error as appropriate.
     error = None
     user_query = None
@@ -77,7 +109,7 @@ def query():
     response = None   # TODO: Replace me with an appropriate call to OpenSearch
     # Postprocess results here if you so desire
 
-    #print(response)
+    # print(response)
     if error is None:
         return render_template("search_results.jinja2", query=user_query, search_response=response,
                                display_filters=display_filters, applied_filters=applied_filters,
@@ -91,10 +123,10 @@ def create_query(user_query, filters, sort="_score", sortDir="desc"):
     query_obj = {
         'size': 10,
         "query": {
-            "match_all": {} # Replace me with a query that both searches and filters
+            "match_all": {}  # Replace me with a query that both searches and filters
         },
         "aggs": {
-            #TODO: FILL ME IN
+            # TODO: FILL ME IN
         }
     }
     return query_obj
