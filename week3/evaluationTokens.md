@@ -1,0 +1,24 @@
+# Product Types
+1. Headphones
+2. Computer
+3. Phone
+4. Television
+5. Cable
+# Brands
+1. Sony
+2. Samsung
+3. LG
+4. Apple
+5. Microsoft
+# Models
+1. ThinkPad
+2. iPhone
+3. Mac
+4. Insignia 
+5. Asus
+# Attributes
+1. Black
+2. Gaming
+3. HD
+4. Sale
+5. Speed
